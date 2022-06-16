@@ -7,6 +7,7 @@ const { body, validationResult } = require('express-validator');
 // create new user using: register --- No login required
 router.post('/register', [
 
+    // one array to define condition
     body('name', 'Enter valid name').isLength({ min: 3 }),
     body('email', 'Enter valid email').isEmail(),
     body('password', 'Password must be atleast 5 characters').isLength({ min: 5 })
@@ -32,6 +33,7 @@ router.post('/register', [
         res.json(result);
 
     } catch (err) {
+        // catch internal error
         console.log(err);
         res.status(500);
         res.send({error: "Some error occured !!!"})
