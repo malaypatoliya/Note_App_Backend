@@ -2,10 +2,14 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User')
 const { body, validationResult } = require('express-validator');
+
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = "malay";
 
+const fetchuser = require('../middlewares/fetchuser');
 
-// create new user using: register --- No login required
+// Route-1: create new user using: register --- No login required
 router.post('/register', [
 
     // one array to define condition
@@ -15,8 +19,6 @@ router.post('/register', [
 
 ], async (req, res) => {
 
-    const { name, email, password } = req.body
-
     // If errors, then return bad request and errors 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -24,6 +26,7 @@ router.post('/register', [
     }
 
     try {
+        const { name, email, password } = req.body
 
         // check the user is already exist or not
         let user = await User.findOne({ email: email });
@@ -43,16 +46,94 @@ router.post('/register', [
             password: secretPass
         });
         let result = await user.save();
-        res.json(result);
+
+        // create a jwt token to client
+        const data = {
+            user:{
+                id: user.id
+            }
+        }
+        const authToken = jwt.sign(data, JWT_SECRET);
+
+        // send a auth token to client
+        res.json({authToken: authToken});
 
     } catch (err) {
         // catch internal error
         console.log(err);
         res.status(500);
-        res.send({ error: "Some error occured !!!" })
+        res.send({ error: "Internal server error !!!" })
     }
 })
 
+
+
+// Route-2: authenticate user using: login --- No login required
+router.post('/login', [
+
+    // one array to define condition
+    body('email', 'Enter valid email').isEmail(),
+    body('password', 'Password should not be blank').exists()
+
+], async (req, res) => {
+
+    // If errors, then return bad request and errors 
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+        const { email, password } = req.body;
+
+        // check user is exist or not
+        let user = await User.findOne({email: email});
+        if(!user){
+            return res.status(400).json({error: "Please try to login with correct credetials"});
+        }
+
+        // compare bcrypt password
+        const passwordCompare = await bcrypt.compare(password, user.password);
+        if(!passwordCompare){
+            return res.status(400).json({error: "Please try to login with correct credetials"});
+        }
+
+        // cretae a jwt token to the client
+        const data = {
+            user:{
+                id:user.id
+            }
+        }
+        const authToken = jwt.sign(data, JWT_SECRET);
+
+        // send a auth token to client
+        res.json({authToken: authToken});
+
+
+    } catch (err) {
+        // catch internal error
+        console.log(err);
+        res.status(500);
+        res.send({ error: "Internal server error !!!" })
+    }
+})
+
+
+// Route-3: Get user details using: detuser --- Login required
+router.post('/getuser',fetchuser , async (req, res) => {
+
+    try {
+        const userId = req.user.id;
+        const user = await User.findById(userId).select('-password');
+        res.send(user);
+
+    } catch (err) {
+        // catch internal error
+        console.log(err);
+        res.status(500);
+        res.send({ error: "Internal server error !!!" })
+    }
+})
 
 
 
