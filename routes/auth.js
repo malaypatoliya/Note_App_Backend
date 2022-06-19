@@ -47,16 +47,14 @@ router.post('/register', [
         });
         let result = await user.save();
 
-        // create a jwt token to client
-        const data = {
-            user:{
-                id: user.id
-            }
+        // create a jwt token for client
+        const userData = {
+            userId: user.id
         }
-        const authToken = jwt.sign(data, JWT_SECRET);
+        const authToken = jwt.sign(userData, JWT_SECRET)
 
         // send a auth token to client
-        res.json({authToken: authToken});
+        res.json({ authToken: authToken });
 
     } catch (err) {
         // catch internal error
@@ -73,7 +71,7 @@ router.post('/login', [
 
     // one array to define condition
     body('email', 'Enter valid email').isEmail(),
-    body('password', 'Password should not be blank').exists()
+    body('password', 'Password should not be blank').isLength({ min: 1 })
 
 ], async (req, res) => {
 
@@ -87,27 +85,25 @@ router.post('/login', [
         const { email, password } = req.body;
 
         // check user is exist or not
-        let user = await User.findOne({email: email});
-        if(!user){
-            return res.status(400).json({error: "Please try to login with correct credetials"});
+        let user = await User.findOne({ email: email });
+        if (!user) {
+            return res.status(400).json({ error: "Please try to login with correct credetials" });
         }
 
         // compare bcrypt password
         const passwordCompare = await bcrypt.compare(password, user.password);
-        if(!passwordCompare){
-            return res.status(400).json({error: "Please try to login with correct credetials"});
+        if (!passwordCompare) {
+            return res.status(400).json({ error: "Please try to login with correct credetials" });
         }
 
-        // cretae a jwt token to the client
-        const data = {
-            user:{
-                id:user.id
-            }
+        // cretae a jwt token for client
+        const userData = {
+            userId: user.id
         }
-        const authToken = jwt.sign(data, JWT_SECRET);
+        const authToken = jwt.sign(userData, JWT_SECRET);
 
         // send a auth token to client
-        res.json({authToken: authToken});
+        res.json({ authToken: authToken });
 
 
     } catch (err) {
@@ -120,10 +116,10 @@ router.post('/login', [
 
 
 // Route-3: Get user details using: detuser --- Login required
-router.post('/getuser',fetchuser , async (req, res) => {
+router.post('/getuser', fetchuser, async (req, res) => {
 
     try {
-        const userId = req.user.id;
+        const userId = req.id;
         const user = await User.findById(userId).select('-password');
         res.send(user);
 

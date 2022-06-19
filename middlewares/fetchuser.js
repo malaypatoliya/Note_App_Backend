@@ -10,10 +10,10 @@ const fetchuser = (req, res, next) => {
 
     try {
         // Get user data (user id) from token
-        const data = jwt.verify(token, JWT_SECRET);
+        const userData = jwt.verify(token, JWT_SECRET);
 
-        // send id to req object
-        req.user = data.user;
+        // send id to req object in request parameter
+        req.id = userData.userId;
 
         next();
     } catch (error) {
@@ -22,6 +22,5 @@ const fetchuser = (req, res, next) => {
 
 
 }
-
 
 module.exports = fetchuser;
