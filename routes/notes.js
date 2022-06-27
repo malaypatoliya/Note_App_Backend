@@ -3,6 +3,7 @@ const router = express.Router();
 const Note = require('../models/Note');
 const fetchuser = require('../middlewares/fetchuser');
 const { body, validationResult } = require('express-validator');
+const e = require('express');
 
 
 // Route-1: Fetch all notes using: fetchallnotes --- Login required
@@ -31,12 +32,12 @@ router.post('/addnote', fetchuser, [
 
     // If errors, then return bad request
     const errors = validationResult(req);
-    if(!errors.isEmpty()){
-        return res.status(400).json({errors : errors.array()});
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
     }
 
     try {
-        const {title, description} = req.body;
+        const { title, description } = req.body;
 
         // create a nre note object
         const note = new Note({
@@ -57,67 +58,69 @@ router.post('/addnote', fetchuser, [
 
 
 // Route-3: Update a existing note using: PUT : updatenote --- Login required
-router.put("/updatenote/:id", fetchuser, async (req, res)=>{
+router.put("/updatenote/:id", fetchuser, async (req, res) => {
     try {
-        const {title, description} = req.body;
+        const { title, description } = req.body;
 
         // create a nre object
         const newNote = {};
-        if(title){
+        if (title) {
             newNote.title = title;
         }
-        if(description){
+        if (description) {
             newNote.description = description;
         }
 
         // Find the note to be updated
         let note = await Note.findById(req.params.id);
-        if(!note){
+        if (!note) {
             return res.status(404).send("Note not found !!!");
         }
 
         // check user which is owner of note
-        if(note.user.toString() !== req.id){
+        if (note.user.toString() !== req.id) {
             return res.status(401).send("Unothorised user, Not allow to update note !!!")
         }
 
         // update a note
-        note = await Note.findByIdAndUpdate(req.params.id, {$set: newNote}, {new: true});
+        note = await Note.findByIdAndUpdate(req.params.id, { $set: newNote }, { new: true });
         res.send(note);
 
     } catch (err) {
-         // catch internal error
-         console.log(err);
-         res.status(500);
-         res.send({ error: "Internal server error !!!" })
+        // catch internal error
+        console.log(err);
+        res.status(500);
+        res.send({ error: "Internal server error !!!" })
     }
 })
 
 
 // Route-4: Delete note using: DELETE : deletenote --- Login required
-router.put("/deletenote/:id", fetchuser, async (req, res)=>{
+router.delete("/deletenote/:id", fetchuser, async (req, res) => {
     try {
         // Find the note to be deleted
         let note = await Note.findById(req.params.id);
-        if(!note){
+        if (!note) {
             return res.status(404).send("Note not found !!!");
         }
-        console.log( "Note user id is" + note.user.toString());
-        console.log( "req user id is" + req.user.id);
+
+        // console.log( "Note user id is" + note.user.toString());
+        // console.log( "req user id is" + req.user.id);
+
         // check user which is owner of note
-        if(note.user.toString() !== req.user.id){
-            return res.status(401).send("Unothorised user, Not allow to update note !!!")
+        if (note.user.toString() !== req.id) {
+            return res.status(401).send("Unothorised user, Not allow to delete note !!!")
         }
 
-        // update a note
-        note = await Note.findByIdAndUpdate(req.params.id, {$set: newNote}, {new: true});
-        res.send(note);
-
+        // delete a note
+        note = await Note.findByIdAndDelete(req.params.id);
+        res.send("delete successfully !!!");
+        
     } catch (err) {
-         // catch internal error
-         console.log(err);
-         res.status(500);
-         res.send({ error: "Internal server error !!!" })
+        // catch internal error
+        console.log(err);
+        res.status(500);
+        res.send({ error: "Internal server error !!!" })
     }
 })
 
