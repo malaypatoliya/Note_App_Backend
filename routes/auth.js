@@ -15,14 +15,16 @@ router.post('/register', [
     // one array to define condition
     body('name', 'Enter valid name').isLength({ min: 3 }),
     body('email', 'Enter valid email').isEmail(),
-    body('password', 'Password must be atleast 5 characters').isLength({ min: 5 })
+    body('password', 'Password must be atleast 5 characters').isLength({ min: 4 })
 
 ], async (req, res) => {
+
+    let success = false;
 
     // If errors, then return bad request and errors 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({ success: success, errors: errors.array() });
     }
 
     try {
@@ -31,7 +33,7 @@ router.post('/register', [
         // check the user is already exist or not
         let user = await User.findOne({ email: email });
         if (user) {
-            return res.status(400).json({ error: "Use already exists" });
+            return res.status(400).json({success: success, error: "Use already exists" });
         }
 
         // bcrypt password (hashing password)
@@ -47,14 +49,9 @@ router.post('/register', [
         });
         let result = await user.save();
 
-        // create a jwt token for client
-        const userData = {
-            userId: user.id
-        }
-        const authToken = jwt.sign(userData, JWT_SECRET)
-
         // send a auth token to client
-        res.json({ authToken: authToken });
+        success = true;
+        res.json({success: success, msg:"user created successfully" });
 
     } catch (err) {
         // catch internal error
@@ -71,14 +68,16 @@ router.post('/login', [
 
     // one array to define condition
     body('email', 'Enter valid email').isEmail(),
-    body('password', 'Password should not be blank').isLength({ min: 1 })
+    body('password', 'Password should not be blank').isLength({ min: 4 })
 
 ], async (req, res) => {
+
+    let success = false;
 
     // If errors, then return bad request and errors 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({ success: success, errors: errors.array() });
     }
 
     try {
@@ -87,13 +86,13 @@ router.post('/login', [
         // check user is exist or not
         let user = await User.findOne({ email: email });
         if (!user) {
-            return res.status(400).json({ error: "Please try to login with correct credetials" });
+            return res.status(400).json({ success: success, error: "Please try to login with correct credetials" });
         }
 
         // compare bcrypt password
         const passwordCompare = await bcrypt.compare(password, user.password);
         if (!passwordCompare) {
-            return res.status(400).json({ error: "Please try to login with correct credetials" });
+            return res.status(400).json({ success: success, error: "Please try to login with correct credetials" });
         }
 
         // cretae a jwt token for client
@@ -103,7 +102,8 @@ router.post('/login', [
         const authToken = jwt.sign(userData, JWT_SECRET);
 
         // send a auth token to client
-        res.json({ authToken: authToken });
+        success = true;
+        res.json({ success: success, authToken: authToken });
 
 
     } catch (err) {
