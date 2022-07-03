@@ -10,124 +10,88 @@ const JWT_SECRET = "malay";
 const fetchuser = require('../middlewares/fetchuser');
 
 // Route-1: create new user using: register --- No login required
-router.post('/register', [
-
-    // one array to define condition
-    body('name', 'Enter valid name').isLength({ min: 3 }),
-    body('email', 'Enter valid email').isEmail(),
-    body('password', 'Password must be atleast 5 characters').isLength({ min: 4 })
-
-], async (req, res) => {
+router.post('/register', async (req, res) => {
 
     let success = false;
+    const { name, email, password } = req.body;
 
-    // If errors, then return bad request and errors 
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ success: success, errors: errors.array() });
-    }
+    // check the user is already exist or not
+    let user = await User.findOne({ email: email });
 
     try {
-        const { name, email, password } = req.body
+        if (!name || !email || !password) {
+            return res.status(400).json({ success: success, Error: "Required all field" })
+        } else if (user) {
+            return res.status(400).json({ success: success, Error: "User already exists" });
+        } else {
+            // bcrypt password (hashing password)
+            // genrate salt, (salt = password + some autogenarate text)
+            const salt = await bcrypt.genSalt(10);
+            const hashPass = await bcrypt.hash(password, salt);
 
-        // check the user is already exist or not
-        let user = await User.findOne({ email: email });
-        if (user) {
-            return res.status(400).json({success: success, error: "Use already exists" });
+            // create new user
+            user = new User({
+                name: name,
+                email: email,
+                password: hashPass
+            });
+            let result = await user.save();
+
+            success = true;
+            res.json({ success: success, Msg: "User created successfully" });
         }
-
-        // bcrypt password (hashing password)
-        // genrate salt, (salt = password + some autogenarate text)
-        const salt = await bcrypt.genSalt(10);
-        const secretPass = await bcrypt.hash(password, salt);
-
-        // create new user
-        user = new User({
-            name: name,
-            email: email,
-            password: secretPass
-        });
-        let result = await user.save();
-
-        // send a auth token to client
-        success = true;
-        res.json({success: success, msg:"user created successfully" });
-
     } catch (err) {
-        // catch internal error
-        console.log(err);
-        res.status(500);
-        res.send({ error: "Internal server error !!!" })
+        res.status(500).send({ Error: "Internal server error !!!" })
     }
 })
 
 
 
 // Route-2: authenticate user using: login --- No login required
-router.post('/login', [
-
-    // one array to define condition
-    body('email', 'Enter valid email').isEmail(),
-    body('password', 'Password should not be blank').isLength({ min: 4 })
-
-], async (req, res) => {
-
+router.post('/login', async (req, res) => {
     let success = false;
+    const { email, password } = req.body;
 
-    // If errors, then return bad request and errors 
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ success: success, errors: errors.array() });
-    }
+    // check user is exist or not
+    let user = await User.findOne({ email: email });
+    // compare bcrypt password
+    const passwordMatch = await bcrypt.compare(password, user.password);
 
     try {
-        const { email, password } = req.body;
-
-        // check user is exist or not
-        let user = await User.findOne({ email: email });
-        if (!user) {
-            return res.status(400).json({ success: success, error: "Please try to login with correct credetials" });
+        if (!email || !password) {
+            return res.status(400).json({ success: success, Error: "Enter all field" })
+        } else if (!user) {
+            return res.json({ success: success, Error: "User doesn't exist" });
+        } else if (!passwordMatch) {
+            return res.json({ success: success, Error: "Invalid password" });
+        } else {
+            // cretae a jwt token for client
+            const userData = {
+                userId: user.id
+            }
+            const authToken = jwt.sign(userData, JWT_SECRET);
+            // send a auth token to client
+            success = true;
+            res.json({ success: success, authToken: authToken });
         }
-
-        // compare bcrypt password
-        const passwordCompare = await bcrypt.compare(password, user.password);
-        if (!passwordCompare) {
-            return res.status(400).json({ success: success, error: "Please try to login with correct credetials" });
-        }
-
-        // cretae a jwt token for client
-        const userData = {
-            userId: user.id
-        }
-        const authToken = jwt.sign(userData, JWT_SECRET);
-
-        // send a auth token to client
-        success = true;
-        res.json({ success: success, authToken: authToken });
-
-
     } catch (err) {
-        // catch internal error
-        console.log(err);
-        res.status(500);
-        res.send({ error: "Internal server error !!!" })
+        res.status(500).send({ Error: "Internal server error !!!" })
     }
 })
 
 
 // Route-3: Get user details using: detuser --- Login required
 router.post('/getuser', fetchuser, async (req, res) => {
-
     try {
         const userId = req.id;
         const user = await User.findById(userId).select('-password');
-        res.send(user);
-
+        if (user) {
+            res.send(user);
+        } else {
+            res.json({ Error: "Not getting user" })
+        }
     } catch (err) {
-        // catch internal error
-        console.log(err);
-        res.status(500);
-        res.send({ error: "Internal server error !!!" })
+        res.status(500).send({ Error: "Internal server error !!!" })
     }
 })
 
