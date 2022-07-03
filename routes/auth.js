@@ -4,7 +4,7 @@ const User = require('../models/User')
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = "malay";
+const JWT_SECRET = process.env.SECRET_KEY;
 
 const fetchuser = require('../middlewares/fetchuser');
 
