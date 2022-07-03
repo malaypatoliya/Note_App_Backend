@@ -16,11 +16,11 @@ router.get('/fetchallnotes', fetchuser, async (req, res) => {
 
 // Route-2: Add a new notes using: addnote --- Login required
 router.post('/addnote', fetchuser, async (req, res) => {
-
+    let success = false;
     const { title, description } = req.body;
     try {
         if (!title || !description) {
-            return res.status(400).json({ Error: "Required all field" })
+            return res.status(400).json({ success: success, Error: "Required all field" })
         } else {
             // create a new note object
             const note = new Note({
@@ -30,7 +30,8 @@ router.post('/addnote', fetchuser, async (req, res) => {
             })
             const result = await note.save();
             // res.send(result);
-            res.status(200).json({ Msg: "Note added successfully" });
+            success = true;
+            res.status(200).json({ success: success, Msg: "Note added successfully" });
         }
     } catch (err) {
         res.status(500).send({ Error: "Internal server error !!!" })
@@ -40,17 +41,18 @@ router.post('/addnote', fetchuser, async (req, res) => {
 
 // Route-3: Update a existing note using: PUT : updatenote --- Login required
 router.put("/updatenote/:id", fetchuser, async (req, res) => {
+    let success = false;
     const { title, description } = req.body;
     // Find the note to be updated
     let note = await Note.findById(req.params.id);
 
     try {
         if (!title || !description) {
-            return res.status(400).json({ Error: "Required all field" })
+            return res.status(400).json({ success: success, Error: "Required all field" })
         } else if (!note) {
-            return res.status(400).send({ Error: "Note not found" });
+            return res.status(400).send({ success: success, Error: "Note not found" });
         } else if (note.user.toString() !== req.id) {
-            return res.status(400).send({ Error: "Unothorised user, Not allow to update note !!!" })
+            return res.status(400).send({ success: success, Error: "Unothorised user, Not allow to update note !!!" })
         } else {
             const newNote = {
                 title: title,
@@ -58,7 +60,8 @@ router.put("/updatenote/:id", fetchuser, async (req, res) => {
             }
             // update a note
             note = await Note.findByIdAndUpdate(req.params.id, { $set: newNote }, { new: true });
-            res.status(200).json({ Msg: "Note updated successfully" });
+            success = true;
+            res.status(200).json({ success: success, Msg: "Note updated successfully" });
         }
     } catch (err) {
         res.status(500).send({ Error: "Internal server error !!!" })
@@ -68,17 +71,19 @@ router.put("/updatenote/:id", fetchuser, async (req, res) => {
 
 // Route-4: Delete note using: DELETE : deletenote --- Login required
 router.delete("/deletenote/:id", fetchuser, async (req, res) => {
+    let success = false;
     try {
         // Find the note to be deleted
         let note = await Note.findById(req.params.id);
         if (!note) {
-            return res.status(400).send({ Error: "Note not found" });
-        }else if (note.user.toString() !== req.id) {
-            return res.status(400).send({ Error: "Unothorised user, Not allow to delete note !!!" })
-        }else{
+            return res.status(400).send({ success: success, Error: "Note not found" });
+        } else if (note.user.toString() !== req.id) {
+            return res.status(400).send({ success: success, Error: "Unothorised user, Not allow to delete note !!!" })
+        } else {
             // delete a note
             note = await Note.findByIdAndDelete(req.params.id);
-            res.status(200).json({ Msg: "Note deleted successfully" });
+            success = true;
+            res.status(200).json({ success: success, Msg: "Note deleted successfully" });
         }
     } catch (err) {
         res.status(500).send({ Error: "Internal server error !!!" })

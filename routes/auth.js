@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User')
-const { body, validationResult } = require('express-validator');
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -14,6 +13,7 @@ router.post('/register', async (req, res) => {
 
     let success = false;
     const { name, email, password } = req.body;
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 
     // check the user is already exist or not
     let user = await User.findOne({ email: email });
@@ -21,6 +21,8 @@ router.post('/register', async (req, res) => {
     try {
         if (!name || !email || !password) {
             return res.status(400).json({ success: success, Error: "Required all field" })
+        } else if (!regex.test(email)) {
+            return res.status(400).json({ success: success, Error: "Email is not valid format" });
         } else if (user) {
             return res.status(400).json({ success: success, Error: "User already exists" });
         } else {
@@ -38,7 +40,7 @@ router.post('/register', async (req, res) => {
             let result = await user.save();
 
             success = true;
-            res.json({ success: success, Msg: "User created successfully" });
+            res.status(200).json({ success: success, Msg: "User created successfully" });
         }
     } catch (err) {
         res.status(500).send({ Error: "Internal server error !!!" })
@@ -54,25 +56,26 @@ router.post('/login', async (req, res) => {
 
     // check user is exist or not
     let user = await User.findOne({ email: email });
-    // compare bcrypt password
-    const passwordMatch = await bcrypt.compare(password, user.password);
 
     try {
         if (!email || !password) {
             return res.status(400).json({ success: success, Error: "Enter all field" })
         } else if (!user) {
             return res.json({ success: success, Error: "User doesn't exist" });
-        } else if (!passwordMatch) {
-            return res.json({ success: success, Error: "Invalid password" });
         } else {
-            // cretae a jwt token for client
-            const userData = {
-                userId: user.id
+            let passwordMatch = await bcrypt.compare(password, user.password);
+            if (!passwordMatch) {
+                return res.json({ success: success, Error: "Enter correct password" });
+            } else {
+                // cretae a jwt token for client
+                const userData = {
+                    userId: user.id
+                }
+                const authToken = jwt.sign(userData, JWT_SECRET);
+                // send a auth token to client
+                success = true;
+                res.status(200).json({ success: success, authToken: authToken });
             }
-            const authToken = jwt.sign(userData, JWT_SECRET);
-            // send a auth token to client
-            success = true;
-            res.json({ success: success, authToken: authToken });
         }
     } catch (err) {
         res.status(500).send({ Error: "Internal server error !!!" })
@@ -86,7 +89,7 @@ router.post('/getuser', fetchuser, async (req, res) => {
         const userId = req.id;
         const user = await User.findById(userId).select('-password');
         if (user) {
-            res.send(user);
+            res.status(200).send(user);
         } else {
             res.json({ Error: "Not getting user" })
         }
