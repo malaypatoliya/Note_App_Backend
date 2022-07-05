@@ -18,10 +18,6 @@ app.use(express.json());
 app.use(require('./routes/auth'));
 app.use(require('./routes/notes'));
 
-// app.get('/', (req, res)=>{
-//     res.send('Hello world !!')
-// })
-
 // listening the request on port
 const port = process.env.PORT;
 app.listen(port, () => {

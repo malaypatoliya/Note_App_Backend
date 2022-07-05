@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = "malay";
+const JWT_SECRET = process.env.SECRET_KEY;
 
 const fetchuser = (req, res, next) => {
     // Get jwt token 
